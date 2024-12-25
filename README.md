@@ -96,5 +96,3 @@ This project is licensed under the MIT License. See the LICENSE file for details
 Acknowledgments
 	•	Libraries Used: pandas, numpy, scikit-learn, matplotlib
 	•	Inspiration: Sports data analysis and predictive modeling
-
-You can copy this text directly into your `README.md` file for your repository.
