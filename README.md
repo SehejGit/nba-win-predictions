@@ -18,7 +18,7 @@ To get started with this project, follow these steps:
    git clone https://github.com/Sehej-Git/nba-win-predictions.git
    cd nba-win-predictions
 
-	2.	Set up the environment:
+2.	Set up the environment:
 	•	Install Python 3.8 or later.
 	•	Create a virtual environment and activate it:
 
@@ -26,15 +26,13 @@ python -m venv env
 source env/bin/activate  # On Windows, use `env\Scripts\activate`
 
 
-	3.	Install dependencies:
+3.	Install dependencies:
 
 pip install -r requirements.txt
 
 
-	4.	Run the Notebook:
-	•	Open the Jupyter Notebook to interact with the project:
-
-jupyter notebook
+4.	Run the Notebook:
+	•	Open the Jupyter Notebook to interact with the project: jupyter notebook
 
 
 
