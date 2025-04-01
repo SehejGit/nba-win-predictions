@@ -352,20 +352,210 @@ def get_upcoming_games():
         {"date": today, "home": "CHI", "away": "TOR"},
         {"date": today, "home": "SAS", "away": "ORL"},
         {"date": today, "home": "DEN", "away": "MIN"}
-        # {"date": tomorrow, "home": "CHI", "away": "PHX"},
-        # {"date": tomorrow, "home": "CHI", "away": "PHX"},
+        # {"date": tomorrow, "home": "MEM", "away": "GSW"},
+        # {"date": tomorrow, "home": "CHI", "away": "TOR"},
+        # {"date": tomorrow, "home": "SAS", "away": "ORL"},
+        # {"date": tomorrow, "home": "DEN", "away": "MIN"}
     ]
     
     return upcoming_games
 
+def display_todays_games(games, model, scaler):
+    """Display today's games predictions automatically."""
+    st.header("Today's NBA Game Predictions")
+    
+    # Get upcoming games
+    upcoming_games = get_upcoming_games()
+    today = datetime.now().strftime("%Y-%m-%d")
+    todays_games = [game for game in upcoming_games if game["date"] == today]
+    
+    if not todays_games:
+        st.info("No games scheduled for today.")
+        
+        st.subheader("Enter Custom Games")
+        
+        num_games = st.number_input("Number of games", min_value=1, max_value=15, value=2)
+        
+        home_teams = []
+        away_teams = []
+        
+        for i in range(num_games):
+            col1, col2 = st.columns(2)
+            with col1:
+                home = st.selectbox(f"Home Team {i+1}", options=NBA_TEAMS, index=i % len(NBA_TEAMS), key=f"home_{i}")
+                home_teams.append(home)
+            
+            with col2:
+                away_options = [team for team in NBA_TEAMS if team != home]
+                away = st.selectbox(f"Away Team {i+1}", options=away_options, index=i % len(away_options), key=f"away_{i}")
+                away_teams.append(away)
+        
+        if st.button("Predict Custom Games"):
+            with st.spinner("Analyzing matchups..."):
+                predict_and_display_games(home_teams, away_teams, games, model, scaler)
+    else:
+        home_teams = [game["home"] for game in todays_games]
+        away_teams = [game["away"] for game in todays_games]
+        
+        # Automatically predict and display without requiring button click
+        with st.spinner("Analyzing today's matchups..."):
+            predict_and_display_games(home_teams, away_teams, games, model, scaler)
+
+def predict_and_display_games(home_teams, away_teams, games, model, scaler):
+    """Helper function to predict and display game results."""
+    predictions = predict_games(home_teams, away_teams, games, model, scaler)
+    
+    for i, row in predictions.iterrows():
+        st.markdown("---")
+        st.subheader(f"Game {i+1}: {TEAM_NAMES[row['home_team']]} vs {TEAM_NAMES[row['away_team']]}")
+        
+        # Get comparison for this matchup
+        comparison = compare_teams(games, row['home_team'], row['away_team'])
+        
+        # Create prediction result dict for visualization
+        prediction_result = {
+            "team1": row['home_team'],
+            "team1_prob": row['home_prob'],
+            "team2": row['away_team'],
+            "team2_prob": row['away_prob'],
+            "winner": row['winner']
+        }
+        
+        create_matchup_visualization(row['home_team'], row['away_team'], comparison, prediction_result)
+
+def display_custom_matchup(games, model, scaler):
+    """Display the custom matchup prediction tab."""
+    st.header("Custom Matchup Prediction")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        team1 = st.selectbox("Select Home Team", options=NBA_TEAMS, index=1)
+    
+    with col2:
+        # Filter out team1 from options for team2
+        team2_options = [team for team in NBA_TEAMS if team != team1]
+        team2 = st.selectbox("Select Away Team", options=team2_options, index=0)
+    
+    if st.button("Predict Winner"):
+        with st.spinner("Analyzing matchup..."):
+            # Get comparison
+            comparison = compare_teams(games, team1, team2)
+            
+            # Get prediction
+            prediction = determine_winner(games, team1, team2, model, scaler)
+            
+            # Display results
+            create_matchup_visualization(team1, team2, comparison, prediction)
+
+def display_team_analysis(games, model, scaler):
+    """Display the team analysis tab."""
+    st.header("Team Performance Analysis")
+    
+    team = st.selectbox("Select Team", options=NBA_TEAMS)
+    
+    if st.button("Analyze Team"):
+        with st.spinner("Analyzing team performance..."):
+            recent_games = last_n_games(games, team)
+            
+            if recent_games.empty:
+                st.error(f"No recent games found for {team}.")
+                return
+            
+            stats = get_team_performance(games, team)
+            
+            # Create a team stats card
+            st.subheader(f"{TEAM_NAMES[team]} Recent Performance")
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Record (Last 10)", stats['record'])
+            
+            with col2:
+                st.metric("Avg Points", f"{stats['avg_points']:.1f}")
+            
+            with col3:
+                st.metric("Avg Points Allowed", f"{stats['avg_points_allowed']:.1f}")
+            
+            with col4:
+                st.metric("Plus/Minus", f"{stats['avg_plus_minus']:.1f}")
+            
+            # Additional stats row
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric("FG%", f"{stats['avg_fg_pct']:.1f}%")
+            
+            with col2:
+                st.metric("3P%", f"{stats['avg_fg3_pct']:.1f}%")
+            
+            with col3:
+                st.metric("Assists", f"{stats['avg_ast']:.1f}")
+            
+            # Show recent games
+            st.subheader("Recent Games")
+            
+            # Convert matchup and date for better display
+            display_games = recent_games.copy()
+            display_games['GAME_DATE'] = display_games['GAME_DATE'].dt.strftime('%Y-%m-%d')
+            
+            # Select columns to display
+            columns_to_show = ['GAME_DATE', 'MATCHUP', 'WL', 'PTS', 'FG_PCT', 'FG3_PCT', 'AST', 'REB', 'TOV', 'PLUS_MINUS']
+            
+            # Apply styling
+            def highlight_wins(row):
+                return ['background-color: rgba(144, 238, 144, 0.3)' if row['WL'] == 'W' else 'background-color: rgba(255, 182, 193, 0.3)' for _ in row]
+            
+            styled_games = display_games[columns_to_show].style.apply(highlight_wins, axis=1)
+            
+            st.dataframe(styled_games, use_container_width=True)
+            
+            # Show win probability against each team
+            st.subheader(f"{team} Win Probability Against All Teams")
+            
+            # Calculate win probability against all other teams
+            other_teams = [t for t in NBA_TEAMS if t != team]
+            probabilities = []
+            
+            for other_team in other_teams:
+                prob = predict_game(games, team, other_team, model, scaler) * 100
+                probabilities.append({
+                    'opponent': other_team,
+                    'opponent_name': TEAM_NAMES[other_team],
+                    'win_probability': prob
+                })
+            
+            prob_df = pd.DataFrame(probabilities)
+            
+            # Sort by win probability
+            prob_df = prob_df.sort_values('win_probability', ascending=False)
+            
+            # Create bar chart
+            fig = px.bar(
+                prob_df, 
+                x='opponent', 
+                y='win_probability',
+                color='win_probability',
+                color_continuous_scale=['red', 'yellow', 'green'],
+                range_color=[0, 100],
+                labels={'opponent': 'Opponent', 'win_probability': 'Win Probability (%)'},
+                title=f"{TEAM_NAMES[team]} Win Probability Against Each Team",
+                hover_data=['opponent_name', 'win_probability']
+            )
+            
+            fig.update_layout(xaxis_title="Opponent", yaxis_title="Win Probability (%)")
+            
+            st.plotly_chart(fig, use_container_width=True)
+
 # Main app function
 def main():
-    # Sidebar
+    # Sidebar - change the order of options to make Today's Games first
     st.sidebar.title("NBA Win Predictor")
     
     app_mode = st.sidebar.radio(
         "Select Mode",
-        ["Custom Matchup", "Today's Games", "Team Analysis"]
+        ["Today's Games", "Custom Matchup", "Team Analysis"]
     )
     
     # Load NBA data
@@ -382,184 +572,13 @@ def main():
         st.error("Unable to train the prediction model. Please try again later.")
         return
 
-    if app_mode == "Custom Matchup":
-        st.header("Custom Matchup Prediction")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            team1 = st.selectbox("Select Home Team", options=NBA_TEAMS, index=1)
-        
-        with col2:
-            # Filter out team1 from options for team2
-            team2_options = [team for team in NBA_TEAMS if team != team1]
-            team2 = st.selectbox("Select Away Team", options=team2_options, index=0)
-        
-        if st.button("Predict Winner"):
-            with st.spinner("Analyzing matchup..."):
-                # Get comparison
-                comparison = compare_teams(games, team1, team2)
-                
-                # Get prediction
-                prediction = determine_winner(games, team1, team2, model, scaler)
-                
-                # Display results
-                create_matchup_visualization(team1, team2, comparison, prediction)
-    
-    elif app_mode == "Today's Games":
-        st.header("Today's NBA Game Predictions")
-        
-        # In a real app, you'd fetch the actual games for today
-        # For now, we'll provide a way for users to input games
-        upcoming_games = get_upcoming_games()
-        
-        today = datetime.now().strftime("%Y-%m-%d")
-        todays_games = [game for game in upcoming_games if game["date"] == today]
-        
-        if not todays_games:
-            st.info("No games scheduled for today.")
-            
-            st.subheader("Enter Custom Games")
-            
-            num_games = st.number_input("Number of games", min_value=1, max_value=15, value=2)
-            
-            home_teams = []
-            away_teams = []
-            
-            for i in range(num_games):
-                col1, col2 = st.columns(2)
-                with col1:
-                    home = st.selectbox(f"Home Team {i+1}", options=NBA_TEAMS, index=i % len(NBA_TEAMS), key=f"home_{i}")
-                    home_teams.append(home)
-                
-                with col2:
-                    away_options = [team for team in NBA_TEAMS if team != home]
-                    away = st.selectbox(f"Away Team {i+1}", options=away_options, index=i % len(away_options), key=f"away_{i}")
-                    away_teams.append(away)
-        else:
-            home_teams = [game["home"] for game in todays_games]
-            away_teams = [game["away"] for game in todays_games]
-        
-        if st.button("Predict Today's Games"):
-            with st.spinner("Analyzing all matchups..."):
-                predictions = predict_games(home_teams, away_teams, games, model, scaler)
-                
-                for i, row in predictions.iterrows():
-                    st.markdown("---")
-                    st.subheader(f"Game {i+1}: {TEAM_NAMES[row['home_team']]} vs {TEAM_NAMES[row['away_team']]}")
-                    
-                    # Get comparison for this matchup
-                    comparison = compare_teams(games, row['home_team'], row['away_team'])
-                    
-                    # Create prediction result dict for visualization
-                    prediction_result = {
-                        "team1": row['home_team'],
-                        "team1_prob": row['home_prob'],
-                        "team2": row['away_team'],
-                        "team2_prob": row['away_prob'],
-                        "winner": row['winner']
-                    }
-                    
-                    create_matchup_visualization(row['home_team'], row['away_team'], comparison, prediction_result)
-    
+    # Display the selected tab
+    if app_mode == "Today's Games":
+        display_todays_games(games, model, scaler)
+    elif app_mode == "Custom Matchup":
+        display_custom_matchup(games, model, scaler)
     elif app_mode == "Team Analysis":
-        st.header("Team Performance Analysis")
-        
-        team = st.selectbox("Select Team", options=NBA_TEAMS)
-        
-        if st.button("Analyze Team"):
-            with st.spinner("Analyzing team performance..."):
-                recent_games = last_n_games(games, team)
-                
-                if recent_games.empty:
-                    st.error(f"No recent games found for {team}.")
-                    return
-                
-                stats = get_team_performance(games, team)
-                
-                # Create a team stats card
-                st.subheader(f"{TEAM_NAMES[team]} Recent Performance")
-                
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    st.metric("Record (Last 10)", stats['record'])
-                
-                with col2:
-                    st.metric("Avg Points", f"{stats['avg_points']:.1f}")
-                
-                with col3:
-                    st.metric("Avg Points Allowed", f"{stats['avg_points_allowed']:.1f}")
-                
-                with col4:
-                    st.metric("Plus/Minus", f"{stats['avg_plus_minus']:.1f}")
-                
-                # Additional stats row
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.metric("FG%", f"{stats['avg_fg_pct']:.1f}%")
-                
-                with col2:
-                    st.metric("3P%", f"{stats['avg_fg3_pct']:.1f}%")
-                
-                with col3:
-                    st.metric("Assists", f"{stats['avg_ast']:.1f}")
-                
-                # Show recent games
-                st.subheader("Recent Games")
-                
-                # Convert matchup and date for better display
-                display_games = recent_games.copy()
-                display_games['GAME_DATE'] = display_games['GAME_DATE'].dt.strftime('%Y-%m-%d')
-                
-                # Select columns to display
-                columns_to_show = ['GAME_DATE', 'MATCHUP', 'WL', 'PTS', 'FG_PCT', 'FG3_PCT', 'AST', 'REB', 'TOV', 'PLUS_MINUS']
-                
-                # Apply styling
-                def highlight_wins(row):
-                    return ['background-color: rgba(144, 238, 144, 0.3)' if row['WL'] == 'W' else 'background-color: rgba(255, 182, 193, 0.3)' for _ in row]
-                
-                styled_games = display_games[columns_to_show].style.apply(highlight_wins, axis=1)
-                
-                st.dataframe(styled_games, use_container_width=True)
-                
-                # Show win probability against each team
-                st.subheader(f"{team} Win Probability Against All Teams")
-                
-                # Calculate win probability against all other teams
-                other_teams = [t for t in NBA_TEAMS if t != team]
-                probabilities = []
-                
-                for other_team in other_teams:
-                    prob = predict_game(games, team, other_team, model, scaler) * 100
-                    probabilities.append({
-                        'opponent': other_team,
-                        'opponent_name': TEAM_NAMES[other_team],
-                        'win_probability': prob
-                    })
-                
-                prob_df = pd.DataFrame(probabilities)
-                
-                # Sort by win probability
-                prob_df = prob_df.sort_values('win_probability', ascending=False)
-                
-                # Create bar chart
-                fig = px.bar(
-                    prob_df, 
-                    x='opponent', 
-                    y='win_probability',
-                    color='win_probability',
-                    color_continuous_scale=['red', 'yellow', 'green'],
-                    range_color=[0, 100],
-                    labels={'opponent': 'Opponent', 'win_probability': 'Win Probability (%)'},
-                    title=f"{TEAM_NAMES[team]} Win Probability Against Each Team",
-                    hover_data=['opponent_name', 'win_probability']
-                )
-                
-                fig.update_layout(xaxis_title="Opponent", yaxis_title="Win Probability (%)")
-                
-                st.plotly_chart(fig, use_container_width=True)
+        display_team_analysis(games, model, scaler)
 
 if __name__ == "__main__":
     main()
