@@ -1,81 +1,96 @@
-# Win Probability Predictor
+# NBA Game Win Probability Predictor 🏀
 
-This repository contains a Python-based project for predicting the win probabilities of sports teams in various matchups. The primary tool is a Jupyter Notebook that implements machine learning models to calculate and compare probabilities for home and away teams, ultimately determining the predicted winner for each game.
+![NBA Win Predictor](https://img.shields.io/badge/NBA-Win%20Predictor-blue)
+![Python](https://img.shields.io/badge/Python-3.8%2B-brightgreen)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.31.0%2B-red)
+![Machine Learning](https://img.shields.io/badge/ML-Random%20Forest-yellow)
+
+## Overview
+
+The NBA Game Win Probability Predictor is an interactive web application that uses machine learning to forecast the outcome of NBA games based on teams' recent performance statistics. By analyzing metrics from the last 10 games, such as points scored, field goal percentage, assists, and plus/minus ratings, the model calculates win probabilities for any NBA matchup.
+
+![App Screenshot](https://raw.githubusercontent.com/username/nba-win-predictor/main/screenshot.png)
 
 ## Features
 
-- **Win Probability Prediction**: Calculates win probabilities for home and away teams using a trained machine learning model.
-- **Dynamic Team Matchups**: Allows predictions for specific team matchups provided by the user.
-- **Batch Predictions**: Supports predictions for multiple games happening on a given day.
-- **Outcome Determination**: Identifies the predicted winner based on probabilities.
+- **Today's Games**: Automatically displays win predictions for all NBA games scheduled for the current day
+- **Custom Matchup**: Create hypothetical matchups between any two NBA teams
+- **Team Analysis**: Deep dive into a specific team's recent performance and predicted win rates against all other teams
+- **Real-time Data**: Leverages the NBA API to pull the latest game statistics for accurate predictions
+- **Interactive Visualizations**: Colorful and intuitive charts show win probabilities and team comparisons
+- **Comprehensive Stats**: Displays key performance metrics including points, FG%, 3P%, and plus/minus
+
+## How It Works
+
+The application utilizes a Random Forest machine learning model trained on historical NBA game data. The prediction process involves:
+
+1. **Data Collection**: Fetching recent game data for all NBA teams using the NBA API
+2. **Feature Engineering**: Calculating team performance metrics based on the last 10 games
+3. **Model Training**: Using a Random Forest Classifier to learn from historical matchups
+4. **Prediction**: Applying the trained model to estimate win probabilities for upcoming games
+
+## Development
+
+The prediction model was developed in the `win-probability.ipynb` notebook, which contains:
+- Data exploration and preprocessing steps
+- Feature engineering techniques
+- Model selection and training process
+- Validation and performance evaluation
 
 ## Installation
 
-To get started with this project, follow these steps:
+1. Clone this repository
+```bash
+git clone https://github.com/SehejGit/nba-win-predictions.git
+cd nba-win-predictions
+```
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/Sehej-Git/nba-win-predictions.git
-   cd nba-win-predictions
+2. Install required packages
+```bash
+pip install -r requirements.txt
+```
 
-2. **Set up the environment**:
+3. Run the Streamlit app
+```bash
+streamlit run app-implementation.py
+```
 
-	•	Install Python 3.8 or later.
+## Requirements
 
-	•	Create a virtual environment and activate it:
+The application requires the following packages:
+- streamlit
+- pandas
+- numpy
+- scikit-learn
+- nba_api
+- plotly
+- datetime
+- matplotlib
 
-	```bash
-	python -m venv env
-	source env/bin/activate  # On Windows, use `env\Scripts\activate`
+A complete list with version specifications is available in the `requirements.txt` file.
 
+## Future Improvements
 
- 3. **Install dependencies**:
-
-	```bash
-	pip install -r requirements.txt
-
-
-4. **Run the Notebook**:
-	•	Open the Jupyter Notebook to interact with the project:
-
-	```bash
-	jupyter notebook
-## Usage
-
-**Predicting a Single Game**
-
-Use the determine_winner function to predict the winner of a single game:
-
-	home_team = 'SAC'
-	away_team = 'IND'
-	result = determine_winner(games, home_team, away_team, model, scaler)
-	print(f"Predicted Winner: {result['winner']}")
-
-**Predicting Multiple Games**
-
-To predict multiple games happening today, use:
-
-	home_teams = ['SAC', 'TOR', 'NOP']
-	away_teams = ['IND', 'HOU', 'DEN']
-	predicted_results = predict_games(home_teams, away_teams, games, model, scaler)
-	print(predicted_results)
-
-**Randomly Choosing Winners**
-
-You can simulate random winner selection:
-
-	winner = random_choice('Team A', 'Team B')
-	print(f"Randomly selected winner: {winner}")
-
-## Files
-- win-probability.ipynb: Main Jupyter Notebook containing the implementation.
-- README.md: Documentation for the repository.
-- requirements.txt: List of required Python libraries.
-
-License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
+- Add player-specific metrics to improve prediction accuracy
+- Incorporate injury reports and lineup changes
+- Implement betting odds comparison
+- Expand to historical season simulation
+- Add playoff-specific prediction models
 
 ## Acknowledgments
-- Libraries Used: pandas, numpy, scikit-learn, matplotlib
-- Inspiration: Sports data analysis and predictive modeling
+
+- NBA API for providing access to comprehensive NBA statistics
+- Streamlit for the interactive web application framework
+- The scikit-learn team for the machine learning tools
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Author
+
+[Sehej Singh](https://github.com/SehejGit)
+
+---
+
+Feel free to star ⭐ this repository if you find it useful!
