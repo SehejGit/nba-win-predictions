@@ -9,8 +9,6 @@
 
 The NBA Game Win Probability Predictor is an interactive web application that uses machine learning to forecast the outcome of NBA games based on teams' recent performance statistics. By analyzing metrics from the last 10 games, such as points scored, field goal percentage, assists, and plus/minus ratings, the model calculates win probabilities for any NBA matchup.
 
-![App Screenshot](https://raw.githubusercontent.com/username/nba-win-predictor/main/screenshot.png)
-
 ## Features
 
 - **Today's Games**: Automatically displays win predictions for all NBA games scheduled for the current day
