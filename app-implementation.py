@@ -7,6 +7,8 @@ from nba_api.stats.endpoints import leaguegamefinder
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import pickle
+import os
 
 # Set page config
 st.set_page_config(
@@ -111,21 +113,21 @@ def compare_teams(games_df, team1_abbrev, team2_abbrev, n=10):
 
     comparison = pd.DataFrame({
         f'{team1_abbrev}': [
-            team1_stats['avg_plus_minus'],
-            team1_stats['avg_points'],
-            team1_stats['avg_points_allowed'],
-            team1_stats['avg_fg_pct'],
-            team1_stats['avg_fg3_pct'],
-            team1_stats['avg_ast'],
+            round(team1_stats['avg_plus_minus'], 2),
+            round(team1_stats['avg_points'], 2),
+            round(team1_stats['avg_points_allowed'], 2),
+            round(team1_stats['avg_fg_pct'], 2),
+            round(team1_stats['avg_fg3_pct'], 2),
+            round(team1_stats['avg_ast'], 2),
             team1_stats['record']
         ],
         f'{team2_abbrev}': [
-            team2_stats['avg_plus_minus'],
-            team2_stats['avg_points'],
-            team2_stats['avg_points_allowed'],
-            team2_stats['avg_fg_pct'],
-            team2_stats['avg_fg3_pct'],
-            team2_stats['avg_ast'],
+            round(team2_stats['avg_plus_minus'], 2),
+            round(team2_stats['avg_points'], 2),
+            round(team2_stats['avg_points_allowed'], 2),
+            round(team2_stats['avg_fg_pct'], 2),
+            round(team2_stats['avg_fg3_pct'], 2),
+            round(team2_stats['avg_ast'], 2),
             team2_stats['record']
         ]
     }, index=['Plus/Minus', 'Points', 'Points Allowed', 'FG%', '3P%', 'Assists', 'Record'])
@@ -251,17 +253,17 @@ def create_matchup_visualization(team1, team2, comparison_df, prediction_result)
     col1, col2 = st.columns(2)
     
     # Extract probabilities
-    team1_prob = prediction_result["team1_prob"]
-    team2_prob = prediction_result["team2_prob"]
+    team1_prob = round(prediction_result["team1_prob"], 2)
+    team2_prob = round(prediction_result["team2_prob"], 2)
     
     # Display team names and probabilities
     with col1:
         st.markdown(f"### {TEAM_NAMES[team1]}")
-        st.markdown(f"<h1 style='color:{TEAM_COLORS[team1]};'>{team1_prob:.1f}%</h1>", unsafe_allow_html=True)
+        st.markdown(f"<h1 style='color:{TEAM_COLORS[team1]};'>{team1_prob:.2f}%</h1>", unsafe_allow_html=True)
         
     with col2:
         st.markdown(f"### {TEAM_NAMES[team2]}")
-        st.markdown(f"<h1 style='color:{TEAM_COLORS[team2]};'>{team2_prob:.1f}%</h1>", unsafe_allow_html=True)
+        st.markdown(f"<h1 style='color:{TEAM_COLORS[team2]};'>{team2_prob:.2f}%</h1>", unsafe_allow_html=True)
     
     # Create a progress bar visualization of the probabilities
     fig = go.Figure()
@@ -274,8 +276,8 @@ def create_matchup_visualization(team1, team2, comparison_df, prediction_result)
         name=team1,
         marker=dict(color=TEAM_COLORS[team1]),
         hoverinfo='text',
-        hovertext=f"{team1}: {team1_prob:.1f}%",
-        text=f"{team1}: {team1_prob:.1f}%",
+        hovertext=f"{team1}: {team1_prob:.2f}%",
+        text=f"{team1}: {team1_prob:.2f}%",
         textposition='inside'
     ))
     
@@ -286,8 +288,8 @@ def create_matchup_visualization(team1, team2, comparison_df, prediction_result)
         name=team2,
         marker=dict(color=TEAM_COLORS[team2]),
         hoverinfo='text',
-        hovertext=f"{team2}: {team2_prob:.1f}%",
-        text=f"{team2}: {team2_prob:.1f}%",
+        hovertext=f"{team2}: {team2_prob:.2f}%",
+        text=f"{team2}: {team2_prob:.2f}%",
         textposition='inside'
     ))
     
@@ -311,7 +313,17 @@ def create_matchup_visualization(team1, team2, comparison_df, prediction_result)
     # Display the comparison table
     st.subheader("Team Comparison (Last 10 Games)")
     
-    # Style the DataFrame
+    # Style the DataFrame - ensure values are rounded
+    comparison_df_rounded = comparison_df.copy()
+    for col in comparison_df.columns:
+        for idx in comparison_df.index:
+            if idx != 'Record':  # Skip the record row
+                try:
+                    comparison_df_rounded.loc[idx, col] = round(float(comparison_df.loc[idx, col]), 2)
+                except:
+                    pass
+    
+    # Style function
     def highlight_winner(s):
         if s.name in ['Plus/Minus', 'Points', 'FG%', '3P%', 'Assists']:
             max_val = pd.to_numeric(s).max()
@@ -322,7 +334,7 @@ def create_matchup_visualization(team1, team2, comparison_df, prediction_result)
         return ['' for _ in s]
     
     # Apply styling
-    styled_comparison = comparison_df.style.apply(highlight_winner)
+    styled_comparison = comparison_df_rounded.style.apply(highlight_winner)
     
     # Display the styled table
     st.dataframe(styled_comparison, use_container_width=True)
@@ -333,7 +345,7 @@ def create_matchup_visualization(team1, team2, comparison_df, prediction_result)
     
     st.markdown(f"""
     <div style='background-color: rgba(144, 238, 144, 0.3); padding: 20px; border-radius: 10px; text-align: center;'>
-        <h2>Predicted Winner: {TEAM_NAMES[winner]} ({winner_prob:.1f}%)</h2>
+        <h2>Predicted Winner: {TEAM_NAMES[winner]} ({winner_prob:.2f}%)</h2>
     </div>
     """, unsafe_allow_html=True)
 
@@ -345,13 +357,13 @@ def get_upcoming_games():
     tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
     
     upcoming_games = [
-        {"date": today, "home": "MIL", "away": "PHX"},
-        {"date": today, "home": "NYK", "away": "PHI"},
-        {"date": today, "home": "ATL", "away": "POR"},
-        {"date": today, "home": "MEM", "away": "GSW"},
-        {"date": today, "home": "CHI", "away": "TOR"},
-        {"date": today, "home": "SAS", "away": "ORL"},
-        {"date": today, "home": "DEN", "away": "MIN"}
+        {"date": today, "home": "PHI", "away": "MIL"},
+        {"date": today, "home": "WAS", "away": "ORL"},
+        {"date": today, "home": "TOR", "away": "POR"},
+        {"date": today, "home": "MIA", "away": "MEM"},
+        {"date": today, "home": "BKN", "away": "MIN"},
+        {"date": today, "home": "LAL", "away": "GSW"}
+        # {"date": today, "home": "DEN", "away": "MIN"}
         # {"date": tomorrow, "home": "MEM", "away": "GSW"},
         # {"date": tomorrow, "home": "CHI", "away": "TOR"},
         # {"date": tomorrow, "home": "SAS", "away": "ORL"},
@@ -448,6 +460,7 @@ def display_custom_matchup(games, model, scaler):
             # Display results
             create_matchup_visualization(team1, team2, comparison, prediction)
 
+# 2. Update in display_team_analysis function - Round metrics to 2 decimal places
 def display_team_analysis(games, model, scaler):
     """Display the team analysis tab."""
     st.header("Team Performance Analysis")
@@ -473,25 +486,25 @@ def display_team_analysis(games, model, scaler):
                 st.metric("Record (Last 10)", stats['record'])
             
             with col2:
-                st.metric("Avg Points", f"{stats['avg_points']:.1f}")
+                st.metric("Avg Points", f"{stats['avg_points']:.2f}")
             
             with col3:
-                st.metric("Avg Points Allowed", f"{stats['avg_points_allowed']:.1f}")
+                st.metric("Avg Points Allowed", f"{stats['avg_points_allowed']:.2f}")
             
             with col4:
-                st.metric("Plus/Minus", f"{stats['avg_plus_minus']:.1f}")
+                st.metric("Plus/Minus", f"{stats['avg_plus_minus']:.2f}")
             
             # Additional stats row
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                st.metric("FG%", f"{stats['avg_fg_pct']:.1f}%")
+                st.metric("FG%", f"{stats['avg_fg_pct']:.2f}%")
             
             with col2:
-                st.metric("3P%", f"{stats['avg_fg3_pct']:.1f}%")
+                st.metric("3P%", f"{stats['avg_fg3_pct']:.2f}%")
             
             with col3:
-                st.metric("Assists", f"{stats['avg_ast']:.1f}")
+                st.metric("Assists", f"{stats['avg_ast']:.2f}")
             
             # Show recent games
             st.subheader("Recent Games")
@@ -499,6 +512,15 @@ def display_team_analysis(games, model, scaler):
             # Convert matchup and date for better display
             display_games = recent_games.copy()
             display_games['GAME_DATE'] = display_games['GAME_DATE'].dt.strftime('%Y-%m-%d')
+            
+            # Round numeric columns to 2 decimal places
+            numeric_cols = ['PTS', 'FG_PCT', 'FG3_PCT', 'AST', 'REB', 'TOV', 'PLUS_MINUS']
+            for col in numeric_cols:
+                if col in display_games.columns:
+                    if col in ['FG_PCT', 'FG3_PCT']:  # Convert to percentage display
+                        display_games[col] = display_games[col].apply(lambda x: round(x * 100, 2))
+                    else:
+                        display_games[col] = display_games[col].apply(lambda x: round(x, 2))
             
             # Select columns to display
             columns_to_show = ['GAME_DATE', 'MATCHUP', 'WL', 'PTS', 'FG_PCT', 'FG3_PCT', 'AST', 'REB', 'TOV', 'PLUS_MINUS']
@@ -519,7 +541,7 @@ def display_team_analysis(games, model, scaler):
             probabilities = []
             
             for other_team in other_teams:
-                prob = predict_game(games, team, other_team, model, scaler) * 100
+                prob = round(predict_game(games, team, other_team, model, scaler) * 100, 2)
                 probabilities.append({
                     'opponent': other_team,
                     'opponent_name': TEAM_NAMES[other_team],
@@ -531,7 +553,7 @@ def display_team_analysis(games, model, scaler):
             # Sort by win probability
             prob_df = prob_df.sort_values('win_probability', ascending=False)
             
-            # Create bar chart
+            # Create bar chart with properly formatted tooltips
             fig = px.bar(
                 prob_df, 
                 x='opponent', 
@@ -541,16 +563,44 @@ def display_team_analysis(games, model, scaler):
                 range_color=[0, 100],
                 labels={'opponent': 'Opponent', 'win_probability': 'Win Probability (%)'},
                 title=f"{TEAM_NAMES[team]} Win Probability Against Each Team",
-                hover_data=['opponent_name', 'win_probability']
+                hover_data={
+                    'opponent_name': True,
+                    'win_probability': ':.2f'  # Format to 2 decimal places
+                }
             )
             
             fig.update_layout(xaxis_title="Opponent", yaxis_title="Win Probability (%)")
+            fig.update_traces(hovertemplate='<b>%{customdata[0]}</b><br>Win Probability: %{y:.2f}%')
             
             st.plotly_chart(fig, use_container_width=True)
 
-# Main app function
+def save_model(model, scaler, path='model.pkl'):
+    """Save trained model and scaler to a pickle file."""
+    with open(path, 'wb') as f:
+        pickle.dump({'model': model, 'scaler': scaler, 'timestamp': datetime.now()}, f)
+    print(f"Model saved to {path}")
+
+def load_model(path='model.pkl', max_age_days=1):
+    """Load model and scaler from pickle file if it exists and is not too old."""
+    if not os.path.exists(path):
+        print(f"No saved model found at {path}")
+        return None, None
+        
+    with open(path, 'rb') as f:
+        saved_data = pickle.load(f)
+    
+    # Check if model is too old
+    model_age = datetime.now() - saved_data['timestamp']
+    if model_age.days > max_age_days:
+        print(f"Saved model is {model_age.days} days old, exceeding max age of {max_age_days} days")
+        return None, None
+        
+    print(f"Loaded model from {path} (created {model_age.days} days ago)")
+    return saved_data['model'], saved_data['scaler']
+
+# Modify the main app function to use saved model if available
 def main():
-    # Sidebar - change the order of options to make Today's Games first
+    # Sidebar
     st.sidebar.title("NBA Win Predictor")
     
     app_mode = st.sidebar.radio(
@@ -565,8 +615,16 @@ def main():
         st.error("Unable to load NBA data. Please try again later.")
         return
     
-    # Train the model
-    model, scaler = train_model(games)
+    # Try to load saved model first
+    model, scaler = load_model(path='nba_model.pkl', max_age_days=7)
+    
+    # If no valid saved model, train a new one
+    if model is None or scaler is None:
+        with st.spinner("Training new prediction model (this may take a moment)..."):
+            model, scaler = train_model(games)
+            if model is not None and scaler is not None:
+                # Save the newly trained model
+                save_model(model, scaler, path='nba_model.pkl')
     
     if model is None or scaler is None:
         st.error("Unable to train the prediction model. Please try again later.")
